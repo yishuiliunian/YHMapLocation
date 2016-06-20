@@ -47,9 +47,9 @@ TODO: Add long description of the pod here.
   s.dependency 'ElementKit'
   s.dependency 'DZGeometryTools'
   s.dependency 'DZCache'
-
+  s.dependency 'DZAlertPool'
   s.pod_target_xcconfig = {
-        'FRAMEWORK_SEARCH_PATHS' => '$(inherited)   $(PODS_ROOT)/BaiduMapKit/BaiduMapKit/',
+        'FRAMEWORK_SEARCH_PATHS' => '$(inherited)   $(PODS_ROOT)/AMap2DMap/  $(PODS_ROOT)/AMapFoundation/  $(PODS_ROOT)/AMapSearch',
         'OTHER_LDFLAGS'          => '$(inherited) -undefined dynamic_lookup'
   }
 end

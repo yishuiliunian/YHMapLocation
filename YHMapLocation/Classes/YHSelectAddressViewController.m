@@ -7,63 +7,70 @@
 //
 
 #import "YHSelectAddressViewController.h"
-#import <BaiduMapAPI_Map/BMKMapView.h>
-#import <BaiduMapAPI_Map/BMKPointAnnotation.h>
-#import <BaiduMapAPI_Map/BMKPinAnnotationView.h>
-#import <BaiduMapAPI_Search/BMKPoiSearch.h>
 #import <DZGeometryTools/DZGeometryTools.h>
-#import <BaiduMapAPI_Base/BMKBaseComponent.h>//引入base相关所有的头文件
-#import <BaiduMapAPI_Map/BMKMapComponent.h>//引入地图功能所有的头文件
-#import <BaiduMapAPI_Search/BMKSearchComponent.h>//引入检索功能所有的头文件
-#import <BaiduMapAPI_Cloud/BMKCloudSearchComponent.h>//引入云检索功能所有的头文件
-#import <BaiduMapAPI_Location/BMKLocationComponent.h>//引入定位功能所有的头文件
-#import <BaiduMapAPI_Utils/BMKUtilsComponent.h>//引入计算工具所有的头文件
-#import <BaiduMapAPI_Radar/BMKRadarComponent.h>//引入周边雷达功能所有的头文件
-#import <BaiduMapAPI_Map/BMKMapView.h>//只引入所需的单个头文件
-
+#import <MAMapKit/MAMapKit.h>
+#import <AMapFoundationKit/AMapFoundationKit.h>
+#import <AMapSearchKit/AMapSearchKit.h>
 #import "YHLocation.h"
 #import "YHLocationCellElement.h"
 #import "DZImageCache.h"
-@interface YHSelectAddressViewController () <BMKMapViewDelegate,BMKGeoCodeSearchDelegate,BMKLocationServiceDelegate>
+#import "DZAlertPool.h"
+@interface YHSelectAddressViewController () <MAMapViewDelegate, AMapSearchDelegate>
 {
-    BMKMapView* _mapView;
-    BMKPinAnnotationView *newAnnotation;
-    BMKGeoCodeSearch *_geoCodeSearch;
-    BMKReverseGeoCodeOption *_reverseGeoCodeOption;
-    BMKLocationService *_locService;
+    MAMapView* _mapView;
+    MAPinAnnotationView* newAnnotation;
+    AMapSearchAPI* _searchAPI;
+    AMapReGeocodeSearchRequest* _geoSearchAPI;
+    BOOL _isFirst;
 }
 @property (nonatomic, strong) UIButton* mapPin;
 @end
 
 @implementation YHSelectAddressViewController
 
+- (instancetype) initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (!self) {
+        return self;
+    }
+    self.hidesBottomBarWhenPushed = YES;
+    return self;
+}
 #pragma mark 初始化地图，定位
 -(void)initLocationService
 {
-    [_mapView setMapType:BMKMapTypeStandard];// 地图类型 ->卫星／标准、
     _mapView.zoomLevel=17;
     _mapView.delegate=self;
     _mapView.showsUserLocation = YES;
     [_mapView bringSubviewToFront:_mapPin];
-    if (_locService==nil) {
-        _locService = [[BMKLocationService alloc]init];
-        [_locService setDesiredAccuracy:kCLLocationAccuracyBest];
-    }
-    _locService.delegate = self;
-    [_locService startUserLocationService];
     _mapView.showsUserLocation = NO;//先关闭显示的定位图层
-    _mapView.userTrackingMode = BMKUserTrackingModeFollow;//设置定位的状态
-    _mapView.showsUserLocation = YES;//显示定位图层
+    _mapView.userTrackingMode = MAUserTrackingModeFollow;//设置定位的状态
 }
-- (void) loadView
+
+
+-(void)mapView:(MAMapView *)mapView didUpdateUserLocation:(MAUserLocation *)userLocation
+updatingLocation:(BOOL)updatingLocation
 {
-    self.view =[UIView new];
+    if (_isFirst) {
+        MACoordinateSpan span = {0.05, 0.05};
+        MACoordinateRegion region = MACoordinateRegionMake(userLocation.location.coordinate, span);
+        [_mapView setCenterCoordinate:userLocation.location.coordinate];
+        _isFirst = NO;
+        [self searchPOI:userLocation.location.coordinate];
+        [_mapView setRegion:region];
+    }
 }
 - (void) viewDidLoad
 {
+    [super viewDidLoad];
+    _isFirst = YES;
+    _searchAPI = [[AMapSearchAPI alloc] init];
+    _searchAPI.delegate = self;
+    
     UITableView* tableView = [_tableElement createResponser];
     self.tableView = tableView;
-    _mapView = [BMKMapView new];
+    _mapView = [MAMapView new];
     _mapPin = [UIButton buttonWithType:UIButtonTypeCustom];
     [_mapPin setImage:DZCachedImageByName(@"serach_Map") forState:UIControlStateNormal];
     
@@ -72,8 +79,15 @@
     [self.view addSubview:self.tableView];
     [self.view addSubview:_mapPin];
     [self initLocationService];
+    self.title = @"选择地址";
 }
 
+- (void) viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    _mapView.showsUserLocation = YES;//显示定位图层
+
+}
 - (void) viewWillLayoutSubviews
 {
     [super viewWillLayoutSubviews];
@@ -86,78 +100,91 @@
     self.tableView.frame = tableRect;
     
     CGSize size= CGSizeMake(40, 40);
-    _mapPin.frame = CGRectCenter(mapRect, size);
+    
+    CGRect pinRect = CGRectCenter(mapRect, size);
+    _mapPin.frame = CGRectOffset(pinRect, 0, -15);
+    
 }
 #pragma mark BMKLocationServiceDelegate
-- (void)didUpdateBMKUserLocation:(BMKUserLocation *)userLocation
+
+- (void) mapView:(MAMapView *)mapView mapDidMoveByUser:(BOOL)wasUserAction
 {
     _mapView.showsUserLocation = YES;//显示定位图层
-    //设置地图中心为用户经纬度
-    [_mapView updateLocationData:userLocation];
-    
-    BMKCoordinateRegion region ;//表示范围的结构体
-    region.center = _mapView.centerCoordinate;//中心点
-    region.span.latitudeDelta = 0.004;//经度范围（设置为0.1表示显示范围为0.2的纬度范围）
-    region.span.longitudeDelta = 0.004;//纬度范围
-    [_mapView setRegion:region animated:YES];
-    
 }
 
-#pragma mark BMKMapViewDelegate
-- (void)mapView:(BMKMapView *)mapView regionDidChangeAnimated:(BOOL)animated
+- (void) searchPOI:(CLLocationCoordinate2D)MapCoordinate
 {
     //屏幕坐标转地图经纬度
+    
+    if (_geoSearchAPI==nil) {
+        _geoSearchAPI = [[AMapReGeocodeSearchRequest alloc] init];
+    }
+    _geoSearchAPI.location = [AMapGeoPoint locationWithLatitude:MapCoordinate.latitude longitude:MapCoordinate.longitude];
+    _geoSearchAPI.radius = 10000;
+    _geoSearchAPI.requireExtension = YES;
+    [_searchAPI AMapReGoecodeSearch:_geoSearchAPI];
+    DZAlertShowLoading(@"努力搜索中....");
+}
+- (void) mapView:(MAMapView *)mapView regionDidChangeAnimated:(BOOL)animated
+{
     CLLocationCoordinate2D MapCoordinate=[_mapView convertPoint:_mapPin.center toCoordinateFromView:_mapView];
-    
-    if (_geoCodeSearch==nil) {
-        //初始化地理编码类
-        _geoCodeSearch = [[BMKGeoCodeSearch alloc]init];
-        _geoCodeSearch.delegate = self;
-        
-    }
-    if (_reverseGeoCodeOption==nil) {
-        
-        //初始化反地理编码类
-        _reverseGeoCodeOption= [[BMKReverseGeoCodeOption alloc] init];
-    }
-    
-    //需要逆地理编码的坐标位置
-    _reverseGeoCodeOption.reverseGeoPoint =MapCoordinate;
-    [_geoCodeSearch reverseGeoCode:_reverseGeoCodeOption];
-    
+    [self searchPOI:MapCoordinate];
+
 }
 
+
 #pragma mark BMKGeoCodeSearchDelegate
--(void) onGetReverseGeoCodeResult:(BMKGeoCodeSearch *)searcher result:(BMKReverseGeoCodeResult *)result errorCode:(BMKSearchErrorCode)error
+
+- (void) onReGeocodeSearchDone:(AMapReGeocodeSearchRequest *)request response:(AMapReGeocodeSearchResponse *)response
 {
-    //获取周边用户信息
-    if (error==BMK_SEARCH_NO_ERROR) {
-        
+    if (response.regeocode != nil) {
+       
         NSMutableArray* array = [NSMutableArray new];
-        for (BMKPoiInfo* info  in result.poiList) {
+        
+        for (AMapAOI* aoi in response.regeocode.aois) {
             YHLocation* location = [[YHLocation alloc] init];
-            location.name = info.name;
-            location.latitude = info.pt.latitude;
-            location.longtitude = info.pt.longitude;
-            
-            
+            location.name = aoi.name;
+            location.latitude = aoi.location.latitude;
+            location.longtitude = aoi.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
         }
+        
+        for (AMapRoad* road in response.regeocode.roads) {
+            YHLocation* location = [[YHLocation alloc] init];
+            location.name = road.name;
+            location.latitude = road.location.latitude;
+            location.longtitude = road.location.longitude;
+            YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
+            [array addObject:ele];
+        }
+        
+        for (AMapPOI* poi in response.regeocode.pois) {
+            YHLocation* location = [[YHLocation alloc] init];
+            location.name = poi.name;
+            location.latitude = poi.location.latitude;
+            location.longtitude = poi.location.longitude;
+            YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
+            [array addObject:ele];
+        }
+        
         [_tableElement.dataController clean];
         [_tableElement.dataController updateObjects:array];
         [self.tableView reloadData];
     }else{
         
-        NSLog(@"BMKSearchErrorCode: %u",error);
     }
+    DZAlertHideLoading;
 }
 
+- (void) viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    DZAlertHideLoading;
+}
 - (void) viewDidDisappear:(BOOL)animated
 {
     [super viewDidDisappear:animated];
-    _mapView.delegate = nil;
-    _geoCodeSearch.delegate = nil;
-    _locService.delegate = nil;
+
 }
 @end
