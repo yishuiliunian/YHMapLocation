@@ -18,7 +18,6 @@
 @interface YHSelectAddressViewController () <MAMapViewDelegate, AMapSearchDelegate>
 {
     MAMapView* _mapView;
-    MAPinAnnotationView* newAnnotation;
     AMapSearchAPI* _searchAPI;
     AMapReGeocodeSearchRequest* _geoSearchAPI;
     BOOL _isFirst;
@@ -73,6 +72,7 @@ updatingLocation:(BOOL)updatingLocation
     _mapView = [MAMapView new];
     _mapPin = [UIButton buttonWithType:UIButtonTypeCustom];
     [_mapPin setImage:DZCachedImageByName(@"serach_Map") forState:UIControlStateNormal];
+    _mapView.
     
 
     [self.view addSubview:_mapView];
@@ -120,7 +120,7 @@ updatingLocation:(BOOL)updatingLocation
         _geoSearchAPI = [[AMapReGeocodeSearchRequest alloc] init];
     }
     _geoSearchAPI.location = [AMapGeoPoint locationWithLatitude:MapCoordinate.latitude longitude:MapCoordinate.longitude];
-    _geoSearchAPI.radius = 10000;
+    _geoSearchAPI.radius = 1000;
     _geoSearchAPI.requireExtension = YES;
     [_searchAPI AMapReGoecodeSearch:_geoSearchAPI];
     DZAlertShowLoading(@"努力搜索中....");
@@ -140,7 +140,7 @@ updatingLocation:(BOOL)updatingLocation
     if (response.regeocode != nil) {
        
         NSMutableArray* array = [NSMutableArray new];
-        
+        NSMutableArray * annotations = [NSMutableArray new];
         for (AMapAOI* aoi in response.regeocode.aois) {
             YHLocation* location = [[YHLocation alloc] init];
             location.name = aoi.name;
@@ -148,6 +148,12 @@ updatingLocation:(BOOL)updatingLocation
             location.longtitude = aoi.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
+            
+            MAPointAnnotation* pa = [[MAPointAnnotation alloc] init];
+            pa.coordinate = CLLocationCoordinate2DMake(aoi.location.latitude, aoi.location.longitude);
+            pa.title = aoi.name;
+            [annotations addObject:pa];
+            
         }
         
         for (AMapRoad* road in response.regeocode.roads) {
@@ -157,6 +163,11 @@ updatingLocation:(BOOL)updatingLocation
             location.longtitude = road.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
+            
+            MAPointAnnotation* pa = [MAPointAnnotation new];
+            pa.coordinate = CLLocationCoordinate2DMake(road.location.latitude, road.location.longitude);
+            pa.title = road.name;
+            [annotations addObject:pa];
         }
         
         for (AMapPOI* poi in response.regeocode.pois) {
@@ -166,11 +177,19 @@ updatingLocation:(BOOL)updatingLocation
             location.longtitude = poi.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
+            
+            MAPointAnnotation* pa = [MAPointAnnotation new];
+            pa.coordinate = CLLocationCoordinate2DMake(poi.location.latitude, poi.location.longitude);
+            pa.title = poi.name;
+            pa.subtitle = poi.address;
+            [annotations addObject:pa];
         }
         
         [_tableElement.dataController clean];
         [_tableElement.dataController updateObjects:array];
         [self.tableView reloadData];
+        
+        [_mapView addAnnotations:annotations];
     }else{
         
     }
