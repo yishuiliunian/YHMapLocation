@@ -72,7 +72,6 @@ updatingLocation:(BOOL)updatingLocation
     _mapView = [MAMapView new];
     _mapPin = [UIButton buttonWithType:UIButtonTypeCustom];
     [_mapPin setImage:DZCachedImageByName(@"serach_Map") forState:UIControlStateNormal];
-    _mapView.
     
 
     [self.view addSubview:_mapView];
