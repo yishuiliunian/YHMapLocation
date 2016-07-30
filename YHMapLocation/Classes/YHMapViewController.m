@@ -41,18 +41,6 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-
-}
-
-- (void) viewWillAppear:(BOOL)animated
-{
-    [super viewWillAppear:animated];
-    self.title = _location.name;
-}
-- (void) viewDidAppear:(BOOL)animated
-{
-    [super viewDidAppear:animated];
-    
     CLLocationCoordinate2D coor;
     coor.latitude = _location.latitude;
     coor.longitude = _location.longtitude;
@@ -69,6 +57,17 @@
     _mapView.centerCoordinate = coor;
     [_mapView setRegion:region];
     [_mapView setSelectedAnnotations:@[pointAnnotation]];
+
+}
+
+- (void) viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    self.title = _location.name;
+}
+- (void) viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
 }
 
 - (MAAnnotationView *)mapView:(MAMapView *)mapView viewForAnnotation:(id <MAAnnotation>)annotation

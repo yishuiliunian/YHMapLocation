@@ -108,6 +108,10 @@ updatingLocation:(BOOL)updatingLocation
 
 - (void) mapView:(MAMapView *)mapView mapDidMoveByUser:(BOOL)wasUserAction
 {
+    if (wasUserAction) {
+        CLLocationCoordinate2D MapCoordinate=[_mapView convertPoint:_mapPin.center toCoordinateFromView:_mapView];
+        [self searchPOI:MapCoordinate];
+    }
     _mapView.showsUserLocation = YES;//显示定位图层
 }
 
@@ -126,10 +130,9 @@ updatingLocation:(BOOL)updatingLocation
 }
 - (void) mapView:(MAMapView *)mapView regionDidChangeAnimated:(BOOL)animated
 {
-    CLLocationCoordinate2D MapCoordinate=[_mapView convertPoint:_mapPin.center toCoordinateFromView:_mapView];
-    [self searchPOI:MapCoordinate];
-
+  
 }
+
 
 
 #pragma mark BMKGeoCodeSearchDelegate
@@ -139,7 +142,6 @@ updatingLocation:(BOOL)updatingLocation
     if (response.regeocode != nil) {
        
         NSMutableArray* array = [NSMutableArray new];
-        NSMutableArray * annotations = [NSMutableArray new];
         for (AMapAOI* aoi in response.regeocode.aois) {
             YHLocation* location = [[YHLocation alloc] init];
             location.name = aoi.name;
@@ -147,12 +149,6 @@ updatingLocation:(BOOL)updatingLocation
             location.longtitude = aoi.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
-            
-            MAPointAnnotation* pa = [[MAPointAnnotation alloc] init];
-            pa.coordinate = CLLocationCoordinate2DMake(aoi.location.latitude, aoi.location.longitude);
-            pa.title = aoi.name;
-            [annotations addObject:pa];
-            
         }
         
         for (AMapRoad* road in response.regeocode.roads) {
@@ -162,11 +158,6 @@ updatingLocation:(BOOL)updatingLocation
             location.longtitude = road.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
-            
-            MAPointAnnotation* pa = [MAPointAnnotation new];
-            pa.coordinate = CLLocationCoordinate2DMake(road.location.latitude, road.location.longitude);
-            pa.title = road.name;
-            [annotations addObject:pa];
         }
         
         for (AMapPOI* poi in response.regeocode.pois) {
@@ -176,19 +167,11 @@ updatingLocation:(BOOL)updatingLocation
             location.longtitude = poi.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
-            
-            MAPointAnnotation* pa = [MAPointAnnotation new];
-            pa.coordinate = CLLocationCoordinate2DMake(poi.location.latitude, poi.location.longitude);
-            pa.title = poi.name;
-            pa.subtitle = poi.address;
-            [annotations addObject:pa];
         }
         
         [_tableElement.dataController clean];
         [_tableElement.dataController updateObjects:array];
         [self.tableView reloadData];
-        
-        [_mapView addAnnotations:annotations];
     }else{
         
     }
