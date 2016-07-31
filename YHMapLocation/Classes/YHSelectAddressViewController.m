@@ -165,6 +165,7 @@ updatingLocation:(BOOL)updatingLocation
             location.name = poi.name;
             location.latitude = poi.location.latitude;
             location.longtitude = poi.location.longitude;
+            location.address = poi.address;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
         }
