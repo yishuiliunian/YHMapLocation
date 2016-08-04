@@ -187,6 +187,7 @@ updatingLocation:(BOOL)updatingLocation
 - (void) viewDidDisappear:(BOOL)animated
 {
     [super viewDidDisappear:animated];
+    DZAlertHideLoading;
 
 }
 @end
