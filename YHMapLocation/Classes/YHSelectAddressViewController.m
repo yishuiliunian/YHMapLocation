@@ -142,11 +142,12 @@ updatingLocation:(BOOL)updatingLocation
     if (response.regeocode != nil) {
        
         NSMutableArray* array = [NSMutableArray new];
-        for (AMapAOI* aoi in response.regeocode.aois) {
+        for (AMapPOI* poi in response.regeocode.pois) {
             YHLocation* location = [[YHLocation alloc] init];
-            location.name = aoi.name;
-            location.latitude = aoi.location.latitude;
-            location.longtitude = aoi.location.longitude;
+            location.name = poi.name;
+            location.latitude = poi.location.latitude;
+            location.longtitude = poi.location.longitude;
+            location.address = poi.address;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
         }
@@ -159,17 +160,17 @@ updatingLocation:(BOOL)updatingLocation
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
         }
-        
-        for (AMapPOI* poi in response.regeocode.pois) {
+        for (AMapAOI* aoi in response.regeocode.aois) {
             YHLocation* location = [[YHLocation alloc] init];
-            location.name = poi.name;
-            location.latitude = poi.location.latitude;
-            location.longtitude = poi.location.longitude;
-            location.address = poi.address;
+            location.name = aoi.name;
+            location.latitude = aoi.location.latitude;
+            location.longtitude = aoi.location.longitude;
             YHLocationCellElement* ele = [[YHLocationCellElement alloc] initWithLocation:location];
             [array addObject:ele];
         }
+
         
+
         [_tableElement.dataController clean];
         [_tableElement.dataController updateObjects:array];
         [self.tableView reloadData];

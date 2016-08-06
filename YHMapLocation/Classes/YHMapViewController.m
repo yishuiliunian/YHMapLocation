@@ -47,7 +47,8 @@
     
     MAPointAnnotation *pointAnnotation = [[MAPointAnnotation alloc] init];
     pointAnnotation.coordinate = coor;
-    pointAnnotation.title = self.location.name;
+    pointAnnotation.title = _location.name;
+    pointAnnotation.subtitle = _location.address;
     
     [_mapView addAnnotation:pointAnnotation];
     
