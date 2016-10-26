@@ -39,6 +39,10 @@
     self.view = _mapView;
 }
 
+- (void) ensureAuth
+{
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     CLLocationCoordinate2D coor;
