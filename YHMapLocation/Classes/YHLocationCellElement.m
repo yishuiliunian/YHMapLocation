@@ -7,7 +7,7 @@
 //
 
 #import "YHLocationCellElement.h"
-
+#import "DZImageCache.h"
 @implementation YHLocationCellElement
 
 - (instancetype) initWithLocation:(YHLocation *)location
@@ -25,6 +25,7 @@
 {
     [super willBeginHandleResponser:view];
     view.textLabel.text = _location.name;
+    view.imageView.image = DZCachedImageByName(@"ic_small_location");
 }
 - (void) didBeginHandleResponser:(UIResponder *)view
 {

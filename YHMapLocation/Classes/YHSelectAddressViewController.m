@@ -15,12 +15,16 @@
 #import "YHLocationCellElement.h"
 #import "DZImageCache.h"
 #import "DZAlertPool.h"
-@interface YHSelectAddressViewController () <MAMapViewDelegate, AMapSearchDelegate>
+#import <AMapLocationKit/AMapLocationKit.h>
+@interface YHSelectAddressViewController () <MAMapViewDelegate, AMapSearchDelegate, CLLocationManagerDelegate>
 {
     MAMapView* _mapView;
     AMapSearchAPI* _searchAPI;
     AMapReGeocodeSearchRequest* _geoSearchAPI;
     BOOL _isFirst;
+    CLLocationManager* _locationManager;
+    CLLocation* _location;
+    
 }
 @property (nonatomic, strong) UIButton* mapPin;
 @end
@@ -39,26 +43,54 @@
 #pragma mark 初始化地图，定位
 -(void)initLocationService
 {
-    _mapView.zoomLevel=17;
-    _mapView.delegate=self;
-    _mapView.showsUserLocation = YES;
-    [_mapView bringSubviewToFront:_mapPin];
-    _mapView.showsUserLocation = NO;//先关闭显示的定位图层
-    _mapView.userTrackingMode = MAUserTrackingModeFollow;//设置定位的状态
+    if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermined ||
+        [CLLocationManager authorizationStatus] == kCLAuthorizationStatusDenied) {
+        
+        _locationManager= [[CLLocationManager alloc] init];
+        _locationManager.delegate = self;
+        [_locationManager requestWhenInUseAuthorization];
+    } else {
+        _mapView.zoomLevel=17;
+        _mapView.delegate=self;
+        _mapView.showsUserLocation = YES;
+        [_mapView bringSubviewToFront:_mapPin];
+        _mapView.userTrackingMode = MAUserTrackingModeFollow;//设置定位的状态
+    }
+}
+- (void) locationManager:(CLLocationManager *)manager didChangeAuthorizationStatus:(CLAuthorizationStatus)status
+{
+    if (status != kCLAuthorizationStatusDenied) {
+        
+        _mapView.zoomLevel=17;
+        _mapView.delegate=self;
+        _mapView.showsUserLocation = YES;
+        [_mapView bringSubviewToFront:_mapPin];
+        _mapView.userTrackingMode = MAUserTrackingModeFollow;//设置定位的状态
+        
+    }
 }
 
 
 -(void)mapView:(MAMapView *)mapView didUpdateUserLocation:(MAUserLocation *)userLocation
 updatingLocation:(BOOL)updatingLocation
 {
-    if (_isFirst) {
+    void(^SearchAction)(void) = ^(void) {
         MACoordinateSpan span = {0.05, 0.05};
         MACoordinateRegion region = MACoordinateRegionMake(userLocation.location.coordinate, span);
         [_mapView setCenterCoordinate:userLocation.location.coordinate];
         _isFirst = NO;
         [self searchPOI:userLocation.location.coordinate];
         [_mapView setRegion:region];
+    };
+    if (_location == nil) {
+        SearchAction();
+    } else {
+        if([_location distanceFromLocation:userLocation.location] > 100) {
+            SearchAction();
+        }
     }
+    _location = userLocation.location;
+
 }
 - (void) viewDidLoad
 {
@@ -79,6 +111,13 @@ updatingLocation:(BOOL)updatingLocation
     [self.view addSubview:_mapPin];
     [self initLocationService];
     self.title = @"选择地址";
+    
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
+    //
+    self.tableView.layer.shadowColor = [UIColor grayColor].CGColor;
+    self.tableView.layer.shadowOffset = CGSizeMake(10, 10);
+    self.tableView.layer.shadowRadius = 4;
+    self.tableView.layer.shadowOpacity = 0.5;
 }
 
 - (void) viewDidAppear:(BOOL)animated
