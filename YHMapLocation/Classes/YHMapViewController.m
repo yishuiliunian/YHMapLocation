@@ -22,6 +22,7 @@
 
 @implementation YHMapViewController
 @synthesize location = _location;
+
 - (instancetype) initWithLocation:(YHLocation *)location
 {
     self = [super init];
